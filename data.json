@@ -1,0 +1,13 @@
+{
+  "calendar": {
+    "id": "iuchi-2025",
+    "title": "Iuchi Advent 2025",
+    "year": 2025,
+    "timezone": "Asia/Tokyo"
+  },
+  "entries": [
+    { "day": 1, "author": "Alice", "author_url": "https://blog.example.com/alice", "title": "Composeで作る…", "url": "https://blog.example.com/posts/1", "status": "published" },
+    { "day": 2, "author": "Bob", "author_url": "https://x.com/bob", "title": "KMP入門", "url": null, "status": "reserved" },
+    { "day": 3, "author": null, "title": null, "url": null, "status": "open" }
+  ]
+}

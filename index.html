@@ -1,0 +1,265 @@
+<!--
+Advent Calendar Embed Widget (vanilla JS + CSS)
+
+・外部ブログにiframeで差し込む前提（多くのサービスは任意JSを禁止 → iframeが安全）
+・データはJSONで管理。?data= のURLを指定して取得します（GitHub Pagesのraw/公開JSONなど）
+・クエリでカスタマイズ可能：title, year, days, theme(light|dark|auto), locale(ja|en), tz, accent
+・JS/CSSは単一ファイル。静的ホスティングでOK
+
+使い方（例）:
+<iframe
+  src="https://your-domain.example/advent/index.html?title=Iuchi%20Advent%202025&year=2025&data=https%3A%2F%2Fyour-domain.example%2Fadvent%2Fdata.json&theme=auto"
+  style="width:100%;max-width:820px;height:640px;border:0;overflow:hidden" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+></iframe>
+
+JSONスキーマ（data.json 例）:
+{
+  "calendar": {
+    "id": "iuchi-2025",
+    "title": "Iuchi Advent 2025",
+    "year": 2025,
+    "timezone": "Asia/Tokyo"
+  },
+  "entries": [
+    {"day": 1,  "author": "Alice",   "author_url": "https://blog.example.com/alice", "title": "Composeで作る…", "url": "https://blog.example.com/posts/1",  "status": "published"},
+    {"day": 2,  "author": "Bob",     "author_url": "https://x.com/bob",             "title": "KMP入門",        "url": null,                                      "status": "reserved"},
+    {"day": 3,  "author": null,       "title": null,                                   "url": null,                                      "status": "open"}
+    // day は 1..days（デフォルト25）。status: open | reserved | published
+  ]
+}
+-->
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Advent Calendar Embed</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #0a0a0a;
+      --muted: #6b7280; /* gray-500 */
+      --card: #f8fafc;  /* slate-50 */
+      --border: #e5e7eb; /* gray-200 */
+      --accent: #2563eb; /* blue-600 */
+      --accent-weak: #dbeafe; /* blue-100 */
+      --success: #16a34a; /* green-600 */
+      --warn: #ca8a04; /* yellow-600 */
+      --danger: #dc2626; /* red-600 */
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b0f17; --fg: #e5e7eb; --muted: #9ca3af; --card:#0f1624; --border:#1f2937;
+        --accent:#60a5fa; --accent-weak:#0b2440; --success:#22c55e; --warn:#f59e0b; --danger:#f87171;
+      }
+    }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 16px; }
+    .header { display:flex; align-items:center; gap:12px; margin-bottom: 14px; }
+    .dot { width:10px; height:10px; border-radius:9999px; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+    .title { font-size: 1.125rem; font-weight: 700; letter-spacing: .2px; }
+    .subtitle { color: var(--muted); font-size: .9rem; }
+    .legend { display:flex; align-items:center; gap:12px; flex-wrap: wrap; margin: 8px 0 14px; }
+    .tag { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:12px; border:1px solid var(--border); background: var(--card); font-size:.8rem; }
+    .tag i { display:inline-block; width:8px; height:8px; border-radius:999px; }
+    .i-open { background: var(--border); }
+    .i-resv { background: var(--warn); }
+    .i-pub { background: var(--success); }
+
+    .grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    @media (max-width: 720px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 520px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .card { border: 1px solid var(--border); background: var(--card); border-radius: 14px; padding: 10px; display:flex; flex-direction:column; gap: 7px; min-height: 110px; position:relative; overflow:hidden; }
+    .day { font-weight: 800; font-size: 1.2rem; }
+    .date { font-size:.78rem; color:var(--muted); }
+    .status { font-size:.78rem; display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:10px; border:1px solid var(--border); background: rgba(0,0,0,0.02); }
+    .status.open { opacity:.85; }
+    .status.reserved { border-color: rgba(234,179,8,.35); }
+    .status.published { border-color: rgba(34,197,94,.35); }
+    .author { font-size:.88rem; }
+    .post { margin-top:auto; }
+    .post a { text-decoration: none; color: var(--accent); font-weight: 600; }
+
+    .ribbon { position:absolute; top:8px; right:-32px; transform: rotate(35deg); padding:4px 40px; font-size:.72rem; background: var(--accent-weak); border: 1px solid var(--border); color: var(--accent); }
+
+    .footer { margin-top: 14px; display:flex; justify-content: space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+    .brand { color: var(--muted); font-size: .75rem; }
+    .btn { appearance:none; border:1px solid var(--border); background:var(--card); padding:6px 10px; border-radius: 10px; font-size:.78rem; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="dot" aria-hidden="true"></div>
+      <div>
+        <div class="title" id="cal-title">Advent Calendar</div>
+        <div class="subtitle" id="cal-sub">–</div>
+      </div>
+    </div>
+
+    <div class="legend" aria-hidden="true">
+      <span class="tag"><i class="i-open"></i>Open</span>
+      <span class="tag"><i class="i-resv"></i>Reserved</span>
+      <span class="tag"><i class="i-pub"></i>Published</span>
+    </div>
+
+    <div id="grid" class="grid" role="list" aria-label="advent-grid"></div>
+
+    <div class="footer">
+      <span class="brand" id="today"></span>
+      <button class="btn" id="btn-copy">埋め込みコードをコピー</button>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const qs = new URLSearchParams(location.search);
+  const year = parseInt(qs.get('year') || new Date().getFullYear(), 10);
+  const days = Math.min(Math.max(parseInt(qs.get('days')||'25',10), 1), 31);
+  const title = qs.get('title') || `Advent Calendar ${year}`;
+  const theme = qs.get('theme') || 'auto'; // light|dark|auto
+  const accent = qs.get('accent');
+  const locale = (qs.get('locale') || 'ja').toLowerCase();
+  const tz = qs.get('tz') || 'Asia/Tokyo';
+  const dataURL = qs.get('data');
+
+  // Theme override
+  if (theme === 'light') {
+    document.documentElement.style.colorScheme = 'light';
+  } else if (theme === 'dark') {
+    document.documentElement.style.colorScheme = 'dark';
+  }
+  if (accent) {
+    document.documentElement.style.setProperty('--accent', accent);
+    document.documentElement.style.setProperty('--accent-weak', accent + '20');
+  }
+
+  document.getElementById('cal-title').textContent = title;
+  document.getElementById('cal-sub').textContent = `${year} / 12 / 1 – ${year} / 12 / ${days}`;
+
+  // i18n helpers
+  const t = (k) => {
+    const dict = {
+      ja: { open: '空き', reserved: '予約', published: '公開', day: '日', today: '本日', copy: '埋め込みコードをコピーしました' },
+      en: { open: 'Open', reserved: 'Reserved', published: 'Published', day: '', today: 'Today', copy: 'Embed code copied' }
+    };
+    return (dict[locale]||dict.ja)[k] || k;
+  };
+
+  // Format yyyy-mm-dd in target TZ (without external libs)
+  function formatDate(y, m, d, tz) {
+    const dt = new Date(Date.UTC(y, m-1, d, 0, 0, 0));
+    const s = dt.toLocaleDateString(locale, { timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit' });
+    return s;
+  }
+
+  function dayStatus(entry){
+    const map = { open:'open', reserved:'reserved', published:'published' };
+    return map[(entry && entry.status)||'open'] || 'open';
+  }
+
+  function dayLabel(d){ return `${d}${locale==='ja'?'日':''}`; }
+
+  function isToday(y, m, d, tz) {
+    try {
+      const now = new Date();
+      const fmt = (date) => date.toLocaleDateString('en-CA', { timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit' });
+      const a = fmt(now);
+      const b = fmt(new Date(Date.UTC(y, m-1, d)));
+      return a === b;
+    } catch(e){ return false; }
+  }
+
+  function render(entries){
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    const byDay = new Map();
+    (entries||[]).forEach(e => byDay.set(Number(e.day), e));
+
+    for (let d=1; d<=days; d++){
+      const e = byDay.get(d) || { day: d, status: 'open' };
+      const st = dayStatus(e);
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.setAttribute('role','listitem');
+
+      const todayFlag = isToday(year, 12, d, tz);
+      if (todayFlag) {
+        const r = document.createElement('div');
+        r.className = 'ribbon';
+        r.textContent = t('today');
+        card.appendChild(r);
+      }
+
+      const top = document.createElement('div');
+      top.style.display='flex'; top.style.justifyContent='space-between'; top.style.alignItems='baseline';
+      const dayEl = document.createElement('div'); dayEl.className='day'; dayEl.textContent = dayLabel(d);
+      const dateEl = document.createElement('div'); dateEl.className='date'; dateEl.textContent = formatDate(year, 12, d, tz);
+      top.appendChild(dayEl); top.appendChild(dateEl);
+
+      const status = document.createElement('span'); status.className = `status ${st}`;
+      const dot = document.createElement('i'); dot.style.width='8px'; dot.style.height='8px'; dot.style.borderRadius='999px'; dot.style.display='inline-block';
+      dot.style.background = st==='open'?'var(--border)':(st==='reserved'?'var(--warn)':'var(--success)');
+      status.appendChild(dot);
+      status.appendChild(document.createTextNode(' ' + t(st)));
+
+      const author = document.createElement('div'); author.className='author';
+      if (e.author) {
+        if (e.author_url) {
+          const a = document.createElement('a'); a.href = e.author_url; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent = e.author; a.style.color='inherit'; a.style.textDecoration='underline';
+          author.appendChild(a);
+        } else {
+          author.textContent = e.author;
+        }
+      } else {
+        author.textContent = '';
+      }
+
+      const post = document.createElement('div'); post.className='post';
+      if (e.url && e.title && st==='published'){
+        const a = document.createElement('a'); a.href = e.url; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent = e.title;
+        post.appendChild(a);
+      }
+
+      card.appendChild(top);
+      card.appendChild(status);
+      if (author.textContent || author.children.length) card.appendChild(author);
+      if (post.textContent || post.children.length) card.appendChild(post);
+
+      grid.appendChild(card);
+    }
+  }
+
+  async function load(){
+    if (!dataURL){
+      // サンプル（データURL未指定時のデフォルト）
+      render([ {day:1,status:'open'},{day:2,status:'reserved',author:'Your Name'},{day:3,status:'published',author:'You',title:'初日の出記事',url:'#'} ]);
+      return;
+    }
+    try {
+      const res = await fetch(dataURL, { headers: { 'Accept':'application/json' } });
+      if (!res.ok) throw new Error('HTTP '+res.status);
+      const json = await res.json();
+      const entries = Array.isArray(json) ? json : json.entries;
+      render(entries);
+    } catch (e) {
+      console.error('Failed to load data:', e);
+      render([]);
+    }
+  }
+
+  // footer info & copy button
+  const now = new Date();
+  document.getElementById('today').textContent = now.toLocaleString(locale, { timeZone: tz });
+  document.getElementById('btn-copy').addEventListener('click', async () => {
+    const src = location.href;
+    const code = `<iframe src="${src}" style="width:100%;max-width:820px;height:640px;border:0;overflow:hidden" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`;
+    try { await navigator.clipboard.writeText(code); alert(t('copy')); } catch(_) { /* ignore */ }
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
