@@ -3,7 +3,7 @@ Advent Calendar Embed Widget (vanilla JS + CSS)
 
 ・外部ブログにiframeで差し込む前提（多くのサービスは任意JSを禁止 → iframeが安全）
 ・データはJSONで管理。?data= のURLを指定して取得します（GitHub Pagesのraw/公開JSONなど）
-・クエリでカスタマイズ可能：title, year, days, theme(light|dark|auto), locale(ja|en), tz, accent
+・クエリでカスタマイズ可能：title, year, days, theme(light|dark|auto), locale(ja|en), tz, accent, highlight
 ・JS/CSSは単一ファイル。静的ホスティングでOK
 
 使い方（例）:
@@ -76,6 +76,7 @@ JSONスキーマ（data.json 例）:
     @media (prefers-color-scheme: dark) { .weekday-header.sat { color: #60a5fa; } }
 
     .card { border: 1px solid var(--border); background: var(--card); border-radius: 14px; padding: 10px; display:flex; flex-direction:column; gap: 7px; min-height: 110px; position:relative; overflow:hidden; }
+    .card.highlight { border: 2px solid var(--accent); box-shadow: 0 0 12px var(--accent-weak); }
     .day { font-weight: 800; font-size: 1.2rem; }
     .date { font-size:.78rem; color:var(--muted); }
     .status { font-size:.78rem; display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:10px; border:1px solid var(--border); background: rgba(0,0,0,0.02); }
@@ -128,6 +129,7 @@ JSONスキーマ（data.json 例）:
   const locale = (qs.get('locale') || 'ja').toLowerCase();
   const tz = qs.get('tz') || 'Asia/Tokyo';
   const dataURL = qs.get('data');
+  const highlight = qs.get('highlight') ? parseInt(qs.get('highlight'), 10) : null;
 
   // Theme override
   if (theme === 'light') {
@@ -206,6 +208,7 @@ JSONスキーマ（data.json 例）:
       const st = dayStatus(e);
       const card = document.createElement('div');
       card.className = 'card';
+      if (highlight && d === highlight) card.classList.add('highlight');
       card.setAttribute('role','listitem');
 
       const todayFlag = isToday(year, 12, d, tz);
