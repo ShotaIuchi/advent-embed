@@ -66,9 +66,14 @@ JSONスキーマ（data.json 例）:
     .i-resv { background: var(--warn); }
     .i-pub { background: var(--success); }
 
-    .grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
     @media (max-width: 720px) { .grid { grid-template-columns: repeat(4, 1fr); } }
     @media (max-width: 520px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .weekday-header { text-align: center; font-weight: 600; font-size: 0.9rem; padding: 8px; color: var(--muted); }
+    .weekday-header.sun { color: var(--danger); }
+    .weekday-header.sat { color: #2563eb; }
+    @media (prefers-color-scheme: dark) { .weekday-header.sat { color: #60a5fa; } }
 
     .card { border: 1px solid var(--border); background: var(--card); border-radius: 14px; padding: 10px; display:flex; flex-direction:column; gap: 7px; min-height: 110px; position:relative; overflow:hidden; }
     .day { font-weight: 800; font-size: 1.2rem; }
@@ -154,6 +159,12 @@ JSONスキーマ（data.json 例）:
     return s;
   }
 
+  // Get weekday name
+  function getWeekday(y, m, d, tz) {
+    const dt = new Date(Date.UTC(y, m-1, d, 0, 0, 0));
+    return dt.toLocaleDateString(locale, { timeZone: tz, weekday: 'short' });
+  }
+
   function dayStatus(entry){
     const map = { open:'open', reserved:'reserved', published:'published' };
     return map[(entry && entry.status)||'open'] || 'open';
@@ -176,6 +187,19 @@ JSONスキーマ（data.json 例）:
     grid.innerHTML = '';
     const byDay = new Map();
     (entries||[]).forEach(e => byDay.set(Number(e.day), e));
+
+    // 曜日ヘッダーを追加
+    const weekdays = locale === 'ja'
+      ? ['日', '月', '火', '水', '木', '金', '土']
+      : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    weekdays.forEach((wd, i) => {
+      const header = document.createElement('div');
+      header.className = 'weekday-header';
+      if (i === 0) header.classList.add('sun');
+      if (i === 6) header.classList.add('sat');
+      header.textContent = wd;
+      grid.appendChild(header);
+    });
 
     for (let d=1; d<=days; d++){
       const e = byDay.get(d) || { day: d, status: 'open' };
