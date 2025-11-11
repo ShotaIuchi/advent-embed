@@ -6,8 +6,8 @@
     "timezone": "Asia/Tokyo"
   },
   "entries": [
-    { "day": 1, "author": "Alice", "author_url": "https://blog.example.com/alice", "title": "Composeで作る…", "url": "https://blog.example.com/posts/1", "status": "published" },
-    { "day": 2, "author": "Bob", "author_url": "https://x.com/bob", "title": "KMP入門", "url": null, "status": "reserved" },
-    { "day": 3, "author": null, "title": null, "url": null, "status": "open" }
+    { "day": 1, "author": "ShotaIuchi", "author_url": "https://zenn.dev/shota_iuchi", "title": "test..", "url": "https://zenn.dev/articles/79f97ed7be38a8/edit", "status": "published" },
+    { "day": 2, "author": "ShotaIuchi", "author_url": "https://zenn.dev/shota_iuchi", "title": "test..", "url": "https://zenn.dev/articles/79f97ed7be38a8/edit", "status": "reserved" },
+    { "day": 3, "author": "ShotaIuchi", "author_url": "https://zenn.dev/shota_iuchi", "title": "test..", "url": "https://zenn.dev/articles/79f97ed7be38a8/edit", "status": "open" }
   ]
 }
