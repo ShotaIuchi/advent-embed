@@ -231,8 +231,7 @@ JSONスキーマ（data.json 例）:
       const top = document.createElement('div');
       top.style.display='flex'; top.style.justifyContent='space-between'; top.style.alignItems='baseline';
       const dayEl = document.createElement('div'); dayEl.className='day'; dayEl.textContent = dayLabel(d);
-      const dateEl = document.createElement('div'); dateEl.className='date'; dateEl.textContent = formatDate(year, 12, d, tz);
-      top.appendChild(dayEl); top.appendChild(dateEl);
+      top.appendChild(dayEl);
 
       const status = document.createElement('span'); status.className = `status ${st}`;
       const dot = document.createElement('i'); dot.style.width='8px'; dot.style.height='8px'; dot.style.borderRadius='999px'; dot.style.display='inline-block';
