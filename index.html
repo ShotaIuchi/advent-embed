@@ -203,6 +203,15 @@ JSONスキーマ（data.json 例）:
       grid.appendChild(header);
     });
 
+    // 12月1日の曜日を取得（0=日曜, 1=月曜, ... 6=土曜）
+    const firstDayOfMonth = new Date(Date.UTC(year, 11, 1)).getDay();
+
+    // 1日の前に空白セルを追加
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      const empty = document.createElement('div');
+      grid.appendChild(empty);
+    }
+
     for (let d=1; d<=days; d++){
       const e = byDay.get(d) || { day: d, status: 'open' };
       const st = dayStatus(e);
